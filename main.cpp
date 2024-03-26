@@ -77,33 +77,6 @@ int main(int argc, char* argv[]) {
     pkt->size = 0;
     while (av_read_frame(fmt_ctx, pkt) >= 0) {
         if (pkt->stream_index == video_stream_index) {
-            //uint8_t* data = pkt->data;
-            //int size = pkt->size;
-            //int nal_type;
-            //if (data) {
-            //    // 解析H.264 NALU类型
-            //    nal_type = data[4] & 0x1F;  // 假设NALU头部长度为4字节
-            //    //std::cout << "nal_type: " << nal_type << std::endl;
-            //    // 根据NALU类型执行相应的操作
-            //    switch (nal_type) {
-            //    case 1:
-            //        // NALU类型为非IDR图像的片
-            //        //std::cout << "not IDR" << std::endl;
-            //        break;
-            //    case 5:
-            //        // NALU类型为IDR图像的片
-            //        std::cout << "IDR" << std::endl;
-            //        break;
-            //    case 6:
-            //        std::cout << "SEI" << std::endl;
-            //    case 7:
-            //    case 8:
-            //        std::cout << "PPS SPS" << std::endl;
-            //        break;
-            //    default:
-            //        break;
-            //    }
-            //}
             AVFrame* frame = av_frame_alloc();
             ret = avcodec_send_packet(codec_ctx, pkt);
             if (ret < 0) {
@@ -115,8 +88,6 @@ int main(int argc, char* argv[]) {
             if (sei_sd) {
                 printf("SEI Data:\n");
                 std::cout << sei_sd->data + 16 << std::endl;
-                //printf("%.*s\n", (unsigned int)sei_sd->size, sei_sd->data);
-                //fprintf(stdout, "side data %d: %s\n", sei_sd->type, sei_sd->data + 16);
             }
             av_frame_free(&frame);
             av_packet_unref(pkt);
