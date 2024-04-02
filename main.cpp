@@ -11,6 +11,8 @@ extern "C" {
     #include <libswscale/swscale.h>
 }
 
+//#define DEV
+
 enum class MessageType : uint8_t {
     PARAMETER = 0,
     IMAGE_FRAME = 1,
@@ -35,9 +37,17 @@ int main(int argc, char* argv[]) {
     const size_t parameter_type_size = 4;
     const size_t sei_len_size = 4;
     int ret;
-    //const char* url = "rtmp://localhost/live/livestream";
-    const char* url = "E:/rtsp/rtsp.sei.flv";
-
+    //const char* url = "E:/rtsp/rtsp.sei.flv";
+#ifdef DEV
+    const char* url = "rtmp://localhost/live/livestream";
+#else
+    if (argc < 2) {
+        std::cerr << "argc mismatch" << std::endl;
+        std::cerr << "Usage: ./ffmpeg_sei_parse rtmp_url" << std::endl;
+        return 1;
+    }
+    const char* url = argv[1];
+#endif
     avformat_network_init();
     ret = avformat_open_input(&fmt_ctx, url, NULL, NULL);
     if (ret < 0) {
@@ -111,7 +121,7 @@ int main(int argc, char* argv[]) {
             ret = avcodec_send_packet(codec_ctx, pkt);
             if (ret < 0) {
                 fprintf(stderr, "Error sending packet to decoder: %s\n", av_err2str(ret));
-                return 1;
+                goto end;
             }
             while (avcodec_receive_frame(codec_ctx, frame) >= 0) {
                 AVFrameSideData* sei_sd = av_frame_get_side_data(frame, AV_FRAME_DATA_SEI_UNREGISTERED);
@@ -131,7 +141,7 @@ int main(int argc, char* argv[]) {
                         SWS_BILINEAR, NULL, NULL, NULL);
                     if (!sws_ctx) {
                         fprintf(stderr, "Failed to initialize SwsContext for image conversion\n");
-                        return 1;
+                        goto end;
                     }
                 }
                 AVFrame* bgr_frame = av_frame_alloc();
@@ -142,7 +152,7 @@ int main(int argc, char* argv[]) {
                 if (ret < 0) {
                     fprintf(stderr, "Failed to allocate frame data\n");
                     av_frame_free(&bgr_frame);
-                    return 1;
+                    goto end;
                 }
                 sws_scale(sws_ctx, frame->data, frame->linesize, 0, frame->height,
                     bgr_frame->data, bgr_frame->linesize);
@@ -157,6 +167,7 @@ int main(int argc, char* argv[]) {
         }
         av_packet_unref(pkt);
     }
+end:
     avcodec_free_context(&codec_ctx);
     avformat_close_input(&fmt_ctx);
     message_type = MessageType::END;
